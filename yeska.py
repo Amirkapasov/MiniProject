@@ -1,89 +1,69 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtGui import QPainter, QPen, QColor, QFont
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton
+from PyQt5.QtCore import QTimer
+
+app = QApplication(sys.argv)
+
+window = QWidget()
+window.setWindowTitle("Timer")
+window.resize(300, 200)
 
 
-# ⏱ Время таймера (в секундах)
-DURATION = 10
+pause_button = QPushButton("Pause", window)
+pause_button.setGeometry(150, 130, 100, 40)
+paused = False
+
+reset = QPushButton("Reset", window)
+reset.setGeometry(50, 130, 100, 40)
+
+label = QLabel(window)
+label.setGeometry(119, 80, 100, 40)
+label.setStyleSheet("font-size: 24px;")
+
+Start_time = 10
+time_left = Start_time
 
 
-class CircularTimer(QWidget):
-    def __init__(self):
-        super().__init__()
+def update_timer():
+    global time_left
+    if time_left < 0:
+        timer.stop()
+        return
+    minutes = time_left // 60
+    sec = time_left % 60
 
-        # Окно
-        self.setMinimumSize(500, 500)
-        self.setStyleSheet("background-color: #211E1E;")
+    label.setText(f"{minutes:02}:{sec:02}")
+    time_left -= 1
 
-        # Таймерные данные
-        self.duration = DURATION
-        self.remaining_time = self.duration
-        self.progress = 1.0
+def tooglePause():
+    global paused
+    if not paused:
+        timer.stop()
+        pause_button.setText("Resume")
+        paused = True
+    else:
+        timer.start()
+        pause_button.setText("Pause")
+        paused = False
 
-        self.interval_ms = 1 * 100  # Интервал обновления (в миллисекундах)
-        self.steps = self.duration * 1000 / self.interval_ms
+def reset_timer():
+    global time_left, paused
+    timer.stop()
+    paused = False
+    time_left = Start_time
 
-        # QTimer
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_progress)
-        self.timer.start(self.interval_ms)
+    minutes = time_left // 60
+    sec = time_left % 60
+    label.setText(f"{minutes:02}:{sec:02}")
 
-    def update_progress(self):
-        if self.progress > 0:
-            self.progress -= 1 / self.steps
-            self.remaining_time = max(0, int(self.progress * self.duration))
-            self.update()
-        else:
-            self.progress = 0
-            self.remaining_time = 0
-            self.timer.stop()
+    pause_button.setText("Pause")
 
-    def paintEvent(self, event):
-        width = self.width()
-        height = self.height()
-        side = min(width, height) - 100
+timer = QTimer()
+timer.setInterval(1000)
+timer.timeout.connect(update_timer)
+timer.start()
+pause_button.clicked.connect(tooglePause)
+reset.clicked.connect(reset_timer)
 
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        # Перо
-        pen = QPen()
-        pen.setWidth(6)
-        pen.setCapStyle(Qt.RoundCap)
-
-        x = (width - side) // 2
-        y = (height - side) // 2
-
-        # Фоновый круг
-        pen.setColor(QColor("#3A3A3A"))
-        painter.setPen(pen)
-        painter.drawEllipse(x, y, side, side)
-
-        # Прогресс
-        pen.setColor(QColor("#C40606"))
-        painter.setPen(pen)
-
-        start_angle = 90 * 16
-        span_angle = int(self.progress * 360 * 16)
-
-        painter.drawArc(x, y, side, side, start_angle, span_angle)
-
-        # ⏱ Текст таймера
-        minutes = self.remaining_time // 60
-        seconds = self.remaining_time % 60
-        msec = seconds//1000
-        time_text = f"{minutes:02}:{seconds:02}:{msec:02}"
-
-        font = QFont("Arial", 36, QFont.Bold)
-        painter.setFont(font)
-        painter.setPen(QColor("#FFFFFF"))
-
-        painter.drawText(self.rect(), Qt.AlignCenter, time_text)
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = CircularTimer()
-    window.show()
-    sys.exit(app.exec_())
+window.show()
+sys.exit(app.exec_())
